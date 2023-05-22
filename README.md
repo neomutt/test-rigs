@@ -59,7 +59,7 @@ Test the IMAP message set
 
 **Build**:
 ```sh
-gcc -Wall -ggdb3 -O0 -I. -o test-msgset{,.c} libcore.a libemail.a libaddress.a libconfig.a libmutt.a -lidn2 -lpcre2-8
+gcc -Wall -ggdb3 -O0 -I. -o test-msgset{,.c} libcore.a libimap.a libemail.a libaddress.a libconfig.a libmutt.a -lidn2 -lpcre2-8
 ```
 
 **Run**:

@@ -18,6 +18,7 @@
 static struct ConfigDef MainVars[] = {
   // clang-format off
   { "sort", DT_SORT|DT_SORT_REVERSE|DT_SORT_LAST|R_INDEX|R_RESORT, SORT_DATE, 0, NULL, },
+  { "imap_pipeline_depth", DT_NUMBER|DT_NOT_NEGATIVE, 15, 0, NULL, },
   { NULL },
 };
 
@@ -51,20 +52,6 @@ void mx_alloc_memory(struct Mailbox *m)
 }
 void nm_edata_free(void **ptr)
 {
-}
-
-struct ImapEmailData *imap_edata_get(struct Email *e)
-{
-  if (!e)
-    return NULL;
-  return e->edata;
-}
-
-struct ImapAccountData *imap_adata_get(struct Mailbox *m)
-{
-  if (!m || (m->type != MUTT_IMAP) || !m->account)
-    return NULL;
-  return m->account->adata;
 }
 
 static int compare_lines(const void *a, const void *b)
@@ -258,52 +245,13 @@ int mbox_add_email(struct Mailbox *m, struct Email *e)
   return 0;
 }
 
-struct ImapEmailData *imap_edata_new(void)
-{
-  return mutt_mem_calloc(1, sizeof(struct ImapEmailData));
-}
-
-void imap_edata_free(void **ptr)
-{
-  if (!ptr || !*ptr)
-    return;
-
-  struct ImapEmailData *edata = *ptr;
-  /* this should be safe even if the list wasn't used */
-  FREE(&edata->flags_system);
-  FREE(&edata->flags_remote);
-  FREE(ptr);
-}
-
-void imap_adata_free(void **ptr)
-{
-  if (!ptr || !*ptr)
-    return;
-
-  FREE(ptr);
-}
-
-struct ImapAccountData *imap_adata_new(struct Account *a)
-{
-  struct ImapAccountData *adata = mutt_mem_calloc(1, sizeof(struct ImapAccountData));
-  adata->account = a;
-
-  static unsigned char new_seqid = 'a';
-
-  adata->seqid = new_seqid;
-
-  if (++new_seqid > 'z')
-    new_seqid = 'a';
-
-  return adata;
-}
-
 int main()
 {
   const int num_emails = 1000;
 
   struct ConfigSet *cs = cs_new(50);
   CONFIG_INIT_TYPE(cs, Sort);
+  CONFIG_INIT_TYPE(cs, Number);
   cs_register_variables(cs, MainVars, DT_NO_FLAGS);
 
   NeoMutt = neomutt_new(cs);
