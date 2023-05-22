@@ -52,3 +52,17 @@ gcc -Wall -ggdb3 -O0 -I. -o test-menu{,.c} libmenu.a libcore.a libemail.a libcon
 ```sh
 ./test-menu
 ```
+
+## Msgset
+
+Test the IMAP message set
+
+**Build**:
+```sh
+gcc -Wall -ggdb3 -O0 -I. -o test-msgset{,.c} libcore.a libemail.a libaddress.a libconfig.a libmutt.a -lidn2 -lpcre2-8
+```
+
+**Run**:
+```sh
+./test-msgset
+```
