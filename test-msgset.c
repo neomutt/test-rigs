@@ -1,13 +1,18 @@
 #include "config.h"
+#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
+#include <time.h>
 #include "mutt/lib.h"
+#include "config/lib.h"
 #include "email/lib.h"
 #include "core/lib.h"
 #include "mutt.h"
 #include "imap/adata.h"
 #include "imap/edata.h"
 #include "imap/private.h"
+#include "limits.h"
 #include "mx.h"
 #include "sort.h"
 
@@ -54,7 +59,7 @@ void nm_edata_free(void **ptr)
 {
 }
 
-static int compare_lines(const void *a, const void *b)
+int compare_lines(const void *a, const void *b)
 {
   const struct Email *ea = *(struct Email const *const *) a;
   const struct Email *eb = *(struct Email const *const *) b;
@@ -83,18 +88,21 @@ static int make_msg_set(struct Mailbox *m, struct Buffer *buf, enum MessageType 
 {
   int count = 0;             /* number of messages in message set */
   unsigned int setstart = 0; /* start of current message range */
-  int n;
+  int i;
   bool started = false;
 
   struct ImapAccountData *adata = imap_adata_get(m);
   if (!adata || (adata->mailbox != m))
     return -1;
 
-  for (n = *pos; (n < m->msg_count) && (buf_len(buf) < IMAP_MAX_CMDLEN); n++)
+  for (i = *pos; (i < m->msg_count) && (buf_len(buf) < IMAP_MAX_CMDLEN); i++)
   {
-    struct Email *e = m->emails[n];
+    struct Email *e = m->emails[i];
     if (!e)
       break;
+
+    struct ImapEmailData *edata = imap_edata_get(e);
+
     bool match = false; /* whether current message matches flag condition */
     /* don't include pending expunged messages.
      *
@@ -105,23 +113,23 @@ static int make_msg_set(struct Mailbox *m, struct Buffer *buf, enum MessageType 
       switch (flag)
       {
         case MUTT_DELETED:
-          if (e->deleted != imap_edata_get(e)->deleted)
+          if (e->deleted != edata->deleted)
             match = invert ^ e->deleted;
           break;
         case MUTT_FLAG:
-          if (e->flagged != imap_edata_get(e)->flagged)
+          if (e->flagged != edata->flagged)
             match = invert ^ e->flagged;
           break;
         case MUTT_OLD:
-          if (e->old != imap_edata_get(e)->old)
+          if (e->old != edata->old)
             match = invert ^ e->old;
           break;
         case MUTT_READ:
-          if (e->read != imap_edata_get(e)->read)
+          if (e->read != edata->read)
             match = invert ^ e->read;
           break;
         case MUTT_REPLIED:
-          if (e->replied != imap_edata_get(e)->replied)
+          if (e->replied != edata->replied)
             match = invert ^ e->replied;
           break;
         case MUTT_TAG:
@@ -142,33 +150,37 @@ static int make_msg_set(struct Mailbox *m, struct Buffer *buf, enum MessageType 
       count++;
       if (setstart == 0)
       {
-        setstart = imap_edata_get(e)->uid;
+        setstart = edata->uid;
         if (started)
         {
-          buf_add_printf(buf, ",%u", imap_edata_get(e)->uid);
+          buf_add_printf(buf, ",%u", edata->uid);
         }
         else
         {
-          buf_add_printf(buf, "%u", imap_edata_get(e)->uid);
+          buf_add_printf(buf, "%u", edata->uid);
           started = true;
         }
       }
-      else if (n == (m->msg_count - 1))
+      else if (i == (m->msg_count - 1))
       {
         /* tie up if the last message also matches */
-        buf_add_printf(buf, ":%u", imap_edata_get(e)->uid);
+        buf_add_printf(buf, ":%u", edata->uid);
       }
     }
-    else if (setstart)
+    else if (setstart != 0)
     {
+      e = m->emails[i - 1];
+      edata = imap_edata_get(e);
+      const unsigned int uid = edata->uid;
+
       /* End current set if message doesn't match. */
-      if (imap_edata_get(m->emails[n - 1])->uid > setstart)
-        buf_add_printf(buf, ":%u", imap_edata_get(m->emails[n - 1])->uid);
+      if (uid > setstart)
+        buf_add_printf(buf, ":%u", uid);
       setstart = 0;
     }
   }
 
-  *pos = n;
+  *pos = i;
 
   return count;
 }
@@ -245,9 +257,24 @@ int mbox_add_email(struct Mailbox *m, struct Email *e)
   return 0;
 }
 
-int main()
+int main(int argc, char *argv[])
 {
-  const int num_emails = 1000;
+  time_t t = 0;
+
+  if (argc == 2)
+  {
+    unsigned long num = 0;
+    mutt_str_atoul(argv[1], &num);
+    t = num;
+  }
+  else
+  {
+    t = time(NULL);
+  }
+
+  printf("seed: %ld\n", t);
+  srand(t);
+  const int num_emails = 100;
 
   struct ConfigSet *cs = cs_new(50);
   CONFIG_INIT_TYPE(cs, Sort);
@@ -273,22 +300,23 @@ int main()
     e->active = true;
     e->lines = rand() % 65536;
     if ((rand() % 100) > 30)
-      e->flagged = true;
+      e->tagged = true;
     e->edata = edata;
     e->edata_free = imap_edata_free;
     mbox_add_email(m, e);
   }
 
-  qsort(m->emails, m->msg_count, sizeof(struct Email *), compare_lines);
+  // qsort(m->emails, m->msg_count, sizeof(struct Email *), compare_lines);
+  qsort(m->emails, m->msg_count, sizeof(struct Email *), compare_uid);
 
   for (int i = 0; i < num_emails; i++)
   {
     struct Email *e = m->emails[i];
     struct ImapEmailData *edata = e->edata;
-    if (e->flagged)
+    if (e->tagged)
       printf("\033[1;32m");
     else
-      printf("\033[31m");
+      printf("\033[1;31m");
 
     printf("%u ", edata->uid);
     printf("\033[0m");
@@ -299,13 +327,13 @@ int main()
   for (int i = 0; i < num_emails; i++)
   {
     struct Email *e = m->emails[i];
-    if (e->flagged)
+    if (e->tagged)
       count++;
   }
-  printf("%d flagged emails\n", count);
+  printf("%d tagged emails\n", count);
   printf("\n");
 
-  enum MessageType flag = MUTT_FLAG;
+  enum MessageType flag = MUTT_TAG;
   bool changed = false;
   bool invert = false;
   int rc = imap_exec_msgset(m, "PRE", "POST", flag, changed, invert);

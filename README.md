@@ -64,5 +64,5 @@ gcc -Wall -ggdb3 -O0 -I. -o test-msgset{,.c} libcore.a libimap.a libemail.a liba
 
 **Run**:
 ```sh
-./test-msgset
+./test-msgset [RANDOM-SEED]
 ```
