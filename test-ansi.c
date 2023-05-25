@@ -20,6 +20,11 @@ typedef uint8_t PatternCompFlags;
 extern struct AttrColorList MergedColors;
 extern struct CursesColorList CursesColors;
 
+struct MailboxView *get_current_mailbox_view(void)
+{
+  return NULL;
+}
+
 struct Mailbox *get_current_mailbox(void)
 {
   return NULL;
