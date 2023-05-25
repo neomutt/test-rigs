@@ -63,6 +63,10 @@ void mutt_set_flag_update(struct Mailbox *m, struct Email *e, enum MessageType f
 {
 }
 
+void mutt_set_flag(struct Mailbox *m, struct Email *e, enum MessageType flag, bool bf, bool upd_mbox)
+{
+}
+
 void mx_alloc_memory(struct Mailbox *m)
 {
   const int grow = 25;
@@ -100,7 +104,7 @@ int mx_msg_close(struct Mailbox *m, struct Message **msg)
   return 0;
 }
 
-struct Message *mx_msg_open(struct Mailbox *m, int msgno)
+struct Message *mx_msg_open(struct Mailbox *m, struct Email *e)
 {
   return NULL;
 }
@@ -140,11 +144,11 @@ int main(int argc, char *argv[])
   if (!NeoMutt)
     return 1;
 
-  struct MxOps *ops = &MxMaildirOps;
+  const struct MxOps *ops = &MxMaildirOps;
 
   struct Mailbox m = { 0 };
   m.type = MUTT_MAILDIR;
-  mutt_buffer_strcpy(&m.pathbuf, argv[1]);
+  buf_strcpy(&m.pathbuf, argv[1]);
 
   enum MxOpenReturns rc = ops->mbox_open(&m);
   if (rc != MX_OPEN_OK)
@@ -153,7 +157,7 @@ int main(int argc, char *argv[])
     return 1;
   }
 
-  printf("%d emails in %s\n", m.msg_count, mutt_buffer_string(&m.pathbuf));
+  printf("%d emails in %s\n", m.msg_count, buf_string(&m.pathbuf));
   for (int i = 0; i < m.msg_count; i++)
   {
     struct Email *e = m.emails[i];
