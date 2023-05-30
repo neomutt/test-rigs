@@ -66,3 +66,17 @@ gcc -Wall -ggdb3 -O0 -I. -o test-msgset{,.c} libcore.a libimap.a libemail.a liba
 ```sh
 ./test-msgset [RANDOM-SEED]
 ```
+
+## MX Alloc Memory
+
+Test `mx_alloc_memory()`, which allocates space in the `Mailbox` for `emails` and `v2r`.
+
+**Build**:
+```sh
+gcc -Wall -ggdb3 -O0 -I. -o test-mx-alloc{,.c} libcore.a libemail.a libaddress.a libconfig.a libmutt.a -lpcre2-8 -lidn2
+```
+
+**Run**:
+```sh
+./test-mx-alloc SIZE1 SIZE2
+```
