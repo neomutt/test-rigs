@@ -25,6 +25,20 @@ gcc -Wall -ggdb3 -O0 -I. -o test-ansi{,.c} libcolor.a libconfig.a libmutt.a -lpc
 ./test-ansi SEQUENCE
 ```
 
+## Header Cache packing
+
+Test packing and unpacking flag members from `struct Email` and `struct Body`.
+
+**Build**:
+```sh
+gcc -ggdb3 -O0 -I. -o hcache-packing{,.c}
+```
+
+**Run**:
+```sh
+./test-maildir MAILDIR
+```
+
 ## Maildir
 
 Open an parse a Maildir mailbox
