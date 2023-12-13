@@ -16,12 +16,16 @@ char *HomeDir;
 char *ShortHostname;
 bool MonitorContextChanged;
 int SigInt;
+bool StartupComplete = false;
 
 static struct ConfigDef MainVars[] = {
   // clang-format off
+  { "autocrypt", DT_BOOL, false, 0, NULL, },
   { "assumed_charset", DT_SLIST|SLIST_SEP_COLON|SLIST_ALLOW_EMPTY, 0, 0, charset_slist_validator, },
   { "auto_subscribe", DT_BOOL, false, 0, NULL, },
   { "charset", DT_STRING|DT_NOT_EMPTY|DT_CHARSET_SINGLE, 0, 0, charset_validator, },
+  { "header_cache", DT_PATH, 0, 0, NULL, },
+  { "maildir_field_delimiter", DT_STRING|DT_NOT_EMPTY|DT_ON_STARTUP, IP ":", 0, NULL, },
   { "reply_regex", DT_REGEX|R_INDEX|R_RESORT, IP "^((re|aw|sv)(\\[[0-9]+\\])*:[ \t]*)*", 0, NULL, },
   { "rfc2047_parameters", DT_BOOL, true, 0, NULL, },
   { NULL },
@@ -31,6 +35,43 @@ static struct ConfigDef MainVars[] = {
 #define CONFIG_INIT_TYPE(CS, NAME)                                             \
   extern const struct ConfigSetType Cst##NAME;                                 \
   cs_register_type(CS, &Cst##NAME)
+
+const struct ComprOps *compress_get_ops(const char *compr)
+{
+  return NULL;
+}
+
+int mutt_autocrypt_process_autocrypt_header(struct Email *e, struct Envelope *env)
+{
+  return 0;
+}
+
+void mutt_encode_path(struct Buffer *buf, const char *src)
+{
+}
+
+void nm_edata_free(void **ptr)
+{
+}
+
+int nm_update_filename(struct Mailbox *m, const char *old_file,
+                       const char *new_file, struct Email *e)
+{
+  return 0;
+}
+
+const struct StoreOps *store_get_backend_ops(const char *str)
+{
+  return NULL;
+}
+
+void progress_set_message(struct Progress *progress, const char *fmt, ...)
+{
+}
+
+void progress_set_size(struct Progress *progress, size_t size)
+{
+}
 
 struct NeoMutt *test_neomutt_create(void)
 {
@@ -67,36 +108,43 @@ void mutt_set_flag(struct Mailbox *m, struct Email *e, enum MessageType flag, bo
 {
 }
 
-void mx_alloc_memory(struct Mailbox *m)
+void mx_alloc_memory(struct Mailbox *m, int req_size)
 {
-  const int grow = 25;
-  size_t s = MAX(sizeof(struct Email *), sizeof(int));
+  if ((req_size + 1) <= m->email_max)
+    return;
 
-  if (((m->email_max + grow) * s) < (m->email_max * s))
+  // Step size to increase by
+  // Larger mailboxes get a larger step (limited to 1000)
+  const int grow = CLAMP(m->email_max, 25, 1000);
+
+  // Sanity checks
+  req_size = ROUND_UP(req_size + 1, grow);
+
+  const size_t s = MAX(sizeof(struct Email *), sizeof(int));
+  if ((req_size * s) < (m->email_max * s))
   {
     mutt_error(_("Out of memory"));
     mutt_exit(1);
   }
 
-  m->email_max += grow;
   if (m->emails)
   {
-    mutt_mem_realloc(&m->emails, m->email_max * sizeof(struct Email *));
-    mutt_mem_realloc(&m->v2r, m->email_max * sizeof(int));
+    mutt_mem_realloc(&m->emails, req_size * sizeof(struct Email *));
+    mutt_mem_realloc(&m->v2r, req_size * sizeof(int));
   }
   else
   {
-    m->emails = mutt_mem_calloc(m->email_max, sizeof(struct Email *));
-    m->v2r = mutt_mem_calloc(m->email_max, sizeof(int));
+    m->emails = mutt_mem_calloc(req_size, sizeof(struct Email *));
+    m->v2r = mutt_mem_calloc(req_size, sizeof(int));
   }
-  for (int i = m->email_max - grow; i < m->email_max; i++)
+
+  for (int i = m->email_max; i < req_size; i++)
   {
-    if (i < m->email_max)
-    {
-      m->emails[i] = NULL;
-      m->v2r[i] = -1;
-    }
+    m->emails[i] = NULL;
+    m->v2r[i] = -1;
   }
+
+  m->email_max = req_size;
 }
 
 int mx_msg_close(struct Mailbox *m, struct Message **msg)

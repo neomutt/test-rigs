@@ -41,11 +41,11 @@ gcc -ggdb3 -O0 -I. -o hcache-packing{,.c}
 
 ## Maildir
 
-Open an parse a Maildir mailbox
+Open and parse a Maildir mailbox
 
 **Build**:
 ```sh
-gcc -ggdb3 -O0 -I. -o test-maildir{,.c} libmaildir.a libemail.a libaddress.a libcore.a libconfig.a libmutt.a -lidn2
+gcc -ggdb3 -O0 -I. -o test-maildir{,.c} libmaildir.a libhcache.a libemail.a libaddress.a libcore.a libconfig.a libmutt.a -lidn2 -lpcre2-8
 ```
 
 **Run**:
