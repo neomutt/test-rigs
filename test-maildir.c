@@ -18,6 +18,9 @@ bool MonitorContextChanged;
 int SigInt;
 bool StartupComplete = false;
 
+bool config_init_hcache(struct ConfigSet *cs);
+bool config_init_maildir(struct ConfigSet *cs);
+
 static struct ConfigDef MainVars[] = {
   // clang-format off
   { "autocrypt", DT_BOOL, false, 0, NULL, },
@@ -25,7 +28,6 @@ static struct ConfigDef MainVars[] = {
   { "auto_subscribe", DT_BOOL, false, 0, NULL, },
   { "charset", DT_STRING|DT_NOT_EMPTY|DT_CHARSET_SINGLE, 0, 0, charset_validator, },
   { "header_cache", DT_PATH, 0, 0, NULL, },
-  { "maildir_field_delimiter", DT_STRING|DT_NOT_EMPTY|DT_ON_STARTUP, IP ":", 0, NULL, },
   { "reply_regex", DT_REGEX|R_INDEX|R_RESORT, IP "^((re|aw|sv)(\\[[0-9]+\\])*:[ \t]*)*", 0, NULL, },
   { "rfc2047_parameters", DT_BOOL, true, 0, NULL, },
   { NULL },
@@ -48,6 +50,19 @@ int mutt_autocrypt_process_autocrypt_header(struct Email *e, struct Envelope *en
 
 void mutt_encode_path(struct Buffer *buf, const char *src)
 {
+  char *p = mutt_str_dup(src);
+  int rc = mutt_ch_convert_string(&p, cc_charset(), "us-ascii", MUTT_ICONV_NO_FLAGS);
+  size_t len = buf_strcpy(buf, (rc == 0) ? NONULL(p) : NONULL(src));
+
+  /* convert the path to POSIX "Portable Filename Character Set" */
+  for (size_t i = 0; i < len; i++)
+  {
+    if (!isalnum(buf->data[i]) && !strchr("/.-_", buf->data[i]))
+    {
+      buf->data[i] = '_';
+    }
+  }
+  FREE(&p);
 }
 
 void nm_edata_free(void **ptr)
@@ -58,11 +73,6 @@ int nm_update_filename(struct Mailbox *m, const char *old_file,
                        const char *new_file, struct Email *e)
 {
   return 0;
-}
-
-const struct StoreOps *store_get_backend_ops(const char *str)
-{
-  return NULL;
 }
 
 void progress_set_message(struct Progress *progress, const char *fmt, ...)
@@ -89,10 +99,12 @@ struct NeoMutt *test_neomutt_create(void)
   CONFIG_INIT_TYPE(cs, Sort);
   CONFIG_INIT_TYPE(cs, String);
 
-  struct NeoMutt *n = neomutt_new(cs);
+  NeoMutt = neomutt_new(cs);
 
   cs_register_variables(cs, MainVars, DT_NO_FLAGS);
-  return n;
+  config_init_maildir(cs);
+  config_init_hcache(cs);
+  return NeoMutt;
 }
 
 int mutt_copy_message(FILE *fp_out, struct Email *e, struct Message *msg, CopyMessageFlags cmflags, CopyHeaderFlags chflags, int wraplen)
@@ -188,27 +200,31 @@ int main(int argc, char *argv[])
   if (argc != 2)
     return 1;
 
-  NeoMutt = test_neomutt_create();
-  if (!NeoMutt)
+  if (!test_neomutt_create())
     return 1;
+
+  int rc = 1;
+  cs_str_string_set(NeoMutt->sub->cs, "header_cache", "p/cache", NULL);
+  cs_str_string_set(NeoMutt->sub->cs, "header_cache_backend", "lmdb", NULL);
 
   const struct MxOps *ops = &MxMaildirOps;
 
-  struct Mailbox m = { 0 };
-  m.type = MUTT_MAILDIR;
-  buf_strcpy(&m.pathbuf, argv[1]);
+  struct Mailbox *m = mailbox_new();
+  m->type = MUTT_MAILDIR;
+  m->verbose = true;
+  buf_strcpy(&m->pathbuf, argv[1]);
 
-  enum MxOpenReturns rc = ops->mbox_open(&m);
-  if (rc != MX_OPEN_OK)
+  enum MxOpenReturns rc_m = ops->mbox_open(m);
+  if (rc_m != MX_OPEN_OK)
   {
-    printf("open failed\n");
-    return 1;
+    printf("open failed for %s\n", mailbox_path(m));
+    goto done;
   }
 
-  printf("%d emails in %s\n", m.msg_count, buf_string(&m.pathbuf));
-  for (int i = 0; i < m.msg_count; i++)
+  printf("%d emails in %s\n", m->msg_count, mailbox_path(m));
+  for (int i = 0; i < m->msg_count; i++)
   {
-    struct Email *e = m.emails[i];
+    struct Email *e = m->emails[i];
     printf("\t%s\n", e->path);
     if (i > 8)
     {
@@ -217,5 +233,15 @@ int main(int argc, char *argv[])
     }
   }
 
-  return 0;
+  rc = 0;
+
+done:
+  ops->mbox_close(m);
+  mailbox_free(&m);
+
+  struct ConfigSet *cs = NeoMutt->sub->cs;
+  neomutt_free(&NeoMutt);
+  cs_free(&cs);
+
+  return rc;
 }
