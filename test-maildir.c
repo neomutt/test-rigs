@@ -197,15 +197,23 @@ bool progress_update(struct Progress *progress, size_t pos, int percent)
 
 int main(int argc, char *argv[])
 {
-  if (argc != 2)
+  if ((argc < 2) || (argc > 3))
     return 1;
 
   if (!test_neomutt_create())
     return 1;
 
   int rc = 1;
-  cs_str_string_set(NeoMutt->sub->cs, "header_cache", "p/cache", NULL);
-  cs_str_string_set(NeoMutt->sub->cs, "header_cache_backend", "lmdb", NULL);
+  const char *dir = NULL;
+
+  if (mutt_str_equal(argv[1], "-h"))
+  {
+    cs_str_string_set(NeoMutt->sub->cs, "header_cache", "p/cache", NULL);
+    cs_str_string_set(NeoMutt->sub->cs, "header_cache_backend", "lmdb", NULL);
+    argv++;
+  }
+
+  dir = argv[1];
 
   const struct MxOps *ops = &MxMaildirOps;
 
