@@ -1,0 +1,42 @@
+#!/bin/bash 
+
+FILE="mm.log"
+
+if [ $# -eq 0 ]; then
+	exit 1
+fi
+
+if [ $1 = "-m" ]; then
+	shift
+	shift
+	echo "Relays: ${@}" >> "$FILE"
+	cat >> "$FILE"
+	exit 0;
+elif [ $1 = "-T" ]; then
+	echo "Apple      apple@flatcap.org      1 1 CNp"
+	echo "Banana     banana@flatcap.org     1 1 CM"
+	echo "Cherry     cherry@flatcap.org     1 1 CNm"
+	echo "Damson     damson@flatcap.org     1 1 Np"
+	echo "Elderberry elderberry@flatcap.org 1 1 CM"
+	echo "Fig        fig@flatcap.org        1 1 CNm"
+	echo "Guava      guava@flatcap.org      1 1 CNm"
+	echo "Hawthorn   hawthorn@flatcap.org   1 1 C"
+	echo "Ilama      ilama@flatcap.org      1 1 M"
+	echo "Jackfruit  jackfruit@flatcap.org  1 1 CNm"
+	echo "Kumquat    kumquat@flatcap.org    1 1 CMNm"
+	echo "Lemon      lemon@flatcap.org      1 1 CNm"
+	echo "Mango      mango@flatcap.org      1 1 CM"
+	echo "Nectarine  nectarine@flatcap.org  1 1 C"
+	echo "Olive      olive@flatcap.org      1 1 CNm"
+	echo "Papaya     papaya@flatcap.org     1 1 C"
+	echo "Quince     quince@flatcap.org     1 1 CNp"
+	echo "Raspberry  raspberry@flatcap.org  1 1 CNm"
+	echo "Strawberry strawberry@flatcap.org 1 1 CMNm"
+	echo "Tangerine  tangerine@flatcap.org  1 1 CMNm"
+	echo "Ugli       ugli@flatcap.org       1 1 CMNm"
+	echo "Vanilla    vanilla@flatcap.org    1 1 CNp"
+	echo "Wolfberry  wolfberry@flatcap.org  1 1 C"
+	echo "Xigua      xigua@flatcap.org      1 1 CMNp"
+	echo "Yew        yew@flatcap.org        1 1 ."
+	echo "Ziziphus   ziziphus@flatcap.org   1 1 CNm"
+fi

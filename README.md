@@ -19,7 +19,7 @@ Test the ANSI escape sequence parsing: `ansi_color_parse()`
 ```sh
 gcc -Wall -ggdb3 -O0 -I. -o test-ansi{,.c} libcolor.a libconfig.a libmutt.a -lpcre2-8 -lncursesw
 ```
-    
+
 **Run**:
 ```sh
 ./test-ansi SEQUENCE
@@ -94,3 +94,12 @@ gcc -Wall -ggdb3 -O0 -I. -o test-mx-alloc{,.c} libcore.a libemail.a libaddress.a
 ```sh
 ./test-mx-alloc SIZE1 SIZE2
 ```
+
+## MixMaster
+
+Mixmaster is an anonymising proxy for email.
+It's an old technology, but it still works.
+
+`mixmaster` is a script for testing MixMaster chains, without actually using
+Mixmaster hosts.
+
