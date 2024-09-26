@@ -95,11 +95,3 @@ gcc -Wall -ggdb3 -O0 -I. -o test-mx-alloc{,.c} libcore.a libemail.a libaddress.a
 ./test-mx-alloc SIZE1 SIZE2
 ```
 
-## MixMaster
-
-Mixmaster is an anonymising proxy for email.
-It's an old technology, but it still works.
-
-`mixmaster` is a script for testing MixMaster chains, without actually using
-Mixmaster hosts.
-
